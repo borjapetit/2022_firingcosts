@@ -1,7 +1,9 @@
 
-# Replication codes - "Aggregate effects of firing costs with endogenous firm productivity growth"
+# Replication codes: "Aggregate effects of firing costs with endogenous firm productivity growth"
 
 This code is written to make use of parallel programming (`OpenMP`) and `GNUplot` to generate figures. `OpenMP` is included in most Fortran distributions, and `GNUplot` can be freely downloaded [here](https://sourceforge.net/projects/gnuplot/files/gnuplot/5.2.7/). If you don't want to download it, you will need to load the data from a number of `.txt` files (located in the folder `~/results`) into Excel, Matlab, etc, to generate the figures.
+
+You can download the paper [here](https://borjapetit.github.io/files/papers/petit_firing.pdf)
 
 Please, if you find any error or have a suggestion, do not hesitate to  [contact](mailto:bpetit@cunef.edu) me.
 
