@@ -1,0 +1,15 @@
+0.60370000     ! Share firms 0-5 workers
+0.20360000     ! Share firms 6-10 workers
+0.08030000     ! Share firms 11-15 workers
+0.04120000     ! Share firms 16-20 workers
+0.02450000     ! Share firms 21-24 workers
+0.04660000     ! Share firms 25+ workers
+0.27500787     ! Share of firing firms
+0.19728922     ! Firing rate among of firing firms
+0.34471227     ! Share of hiring firms
+0.40523614     ! Hiring rate among hiring firms
+6.91667700     ! Average firm size
+3.39755700     ! Average firm size, entrants
+1.19068620     ! Sd employment
+1.36158480     ! SD employment, entrants
+0.21000000     ! Profits share

@@ -1,0 +1,13 @@
+0.05000000     ! Interest rate
+0.07565204     ! Exit probability
+0.20013609     ! Firing cost
+0.60000000     ! Returns to scale
+2.95196794     ! Aggregate productivity
+1.09761734     ! Std of initial productivity draw
+0.07588005     ! Productivity trend
+0.29887145     ! Std of productivity shocks
+0.47709909     ! Default probability of innovation
+7.22083185     ! Innovation cost, size
+1.25467828     ! Innovation cost, shape
+0.09362279     ! (Dis)utility of labor
+0.00000000     ! Frisch elasticity labor supply
