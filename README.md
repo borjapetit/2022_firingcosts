@@ -108,7 +108,7 @@ The last two options take an initial set of parameters and minimize the sum of s
 
 The last thing you can do with these codes is to run a simple robustness check of the main results, as included in the appendix of the paper. In particular, the program recomputes the general equilibrium results included in "Experiment 1" first for the bechmark calibration, and then shocking each parameter at a time.
 
-The results from this exercises are collected in `results/sensitivity.txt.
+The results from this exercises are collected in `results/sensitivity.txt`.
 
    
 
