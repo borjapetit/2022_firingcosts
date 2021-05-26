@@ -1057,7 +1057,7 @@ END SUBROUTINE LMMIN
 
 ! ------------------------------------------------------------------------------
 
-FUNCTION JACOBIAN(FUNC,X,Y,SHCK,IPRINT) RESULT(JAC)
+FUNCTION JACOBIAN2(FUNC,X,Y,SHCK,IPRINT) RESULT(JAC)
   IMPLICIT NONE
   DOUBLE PRECISION              :: X(:),Y(:),SHCK,SHCK2
   INTEGER,OPTIONAL              :: IPRINT
@@ -1102,6 +1102,70 @@ FUNCTION JACOBIAN(FUNC,X,Y,SHCK,IPRINT) RESULT(JAC)
   IF (PRESENT(IPRINT) .AND. IPRINT.EQ.1) PRINT *, '  '
   92 FORMAT ('   Jacobian, Param =',I4,F10.4)
   RETURN
+END FUNCTION JACOBIAN2
+
+! ------------------------------------------------------------------------------
+! Compute Jacobian of a system of equations
+FUNCTION JACOBIAN(FUNC,X,Y,SHCK,IPRINT) RESULT(JAC)
+  IMPLICIT NONE
+  DOUBLE PRECISION              :: X(:),Y(:),SHCK,SHCK2
+  INTEGER,OPTIONAL              :: IPRINT
+  DOUBLE PRECISION, ALLOCATABLE :: JAC(:,:),YP(:,:),XP(:,:)
+  INTEGER                       :: I,J,IJ
+
+  INTERFACE
+    FUNCTION FUNC(X) RESULT(RESID)
+    DOUBLE PRECISION :: X(:)
+    DOUBLE PRECISION, ALLOCATABLE :: RESID(:)
+    END FUNCTION FUNC
+  END INTERFACE
+
+  ALLOCATE(JAC(SIZE(Y),SIZE(X)),YP(SIZE(Y),SIZE(X)),XP(SIZE(X),SIZE(X)))
+
+  IF (PRESENT(IPRINT) .AND. IPRINT.EQ.1) PRINT *, '  '
+
+  ! Initialize iteration over parameters
+  DO I=1,SIZE(X)
+
+    IJ      = 0
+    XP(:,I) = X
+    SHCK2   = MAX(ABS(X(I)),DBLE(1.0)) ! Scaling factor for parameter shocks
+
+    ! Shock parameter
+  7 IF (X(I).GT.DBLE(0)) XP(I,I) = X(I) + SHCK2*SHCK   ! Positive parameter -> positive shock
+    IF (X(I).LE.DBLE(0)) XP(I,I) = X(I) - SHCK2*SHCK   ! Negative parameter -> negative shock
+
+    ! Evaluate shocked point
+    YP(:,I) = FUNC(XP(:,I))
+
+    ! Print iteration
+    IF (PRESENT(IPRINT) .AND. IPRINT.EQ.1) WRITE (*,92) I,SUM(YP(:,I)*YP(:,I))
+
+    ! If the difference between shocked point and initial evaluation is too high, decrease the shock
+    IF (SUM(YP(:,I)*YP(:,I)).GT.DBLE(1.2)*SUM(Y(:)*Y(:)) .AND. IJ.LT.10) THEN
+      SHCK2 = DBLE(0.90)*SHCK2
+      IJ    = IJ + 1
+      GOTO 7
+    END IF
+
+    ! If the difference between shocked point and initial evaluation is too small, increase the shock
+    IF (SUM(YP(:,I)*YP(:,I)).LT.DBLE(0.8)*SUM(Y(:)*Y(:)) .AND. IJ.LT.10) THEN
+      SHCK2 = DBLE(1.20)*SHCK2
+      IJ    = IJ + 1
+      GOTO 7
+    END IF
+
+    ! Compute Jacobian
+    DO J=1,SIZE(Y)
+      JAC(J,I) = ( YP(J,I) - Y(J) )/( XP(I,I) - X(I) )
+    END DO
+
+  END DO
+
+  IF (PRESENT(IPRINT) .AND. IPRINT.EQ.1) PRINT *, '  '
+
+  92 FORMAT ('   Jacobian, Param =',I4,F10.4)
+  RETURN
 END FUNCTION JACOBIAN
 
 ! ------------------------------------------------------------------------------
@@ -1123,7 +1187,7 @@ SUBROUTINE BROYDEN(J1,J0,X1,X0,F1,F0,S)
   DX(:) = X1(:)-X0(:)
   DF(:) = F1(:)-F0(:)
 
-  IF (PRESENT(S) .AND. S.eq.0 .and. N.eq.M) THEN
+  IF (PRESENT(S) .AND. S.EQ.0 .AND. N.EQ.M) THEN
 
     DO I=1,M
      JDF(i) = SUM(J0(I,:)*DF(:))

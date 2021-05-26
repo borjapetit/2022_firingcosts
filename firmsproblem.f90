@@ -187,18 +187,12 @@ SUBROUTINE VALUEFUNC(val,npn,id,in,sav)
     VIn     = SUM(Tdd1(:)*VN(:)) - cpi                              ! Value of innovating
 
     ! Extensive margin
-    IF (ABS(one-rho_0).gt.tol) THEN ! If firms face extensive margin choice
-      rho  = rho_0/(rho_0+(one-rho_0)*EXPM(-(VIn-VNIn)/ckap))
-      crho = - ckap*LOGM(rho_0+(one-rho_0)*EXPM(-(VIn-VNIn)/ckap)) - (one-rho)*(VIn-VNIn)
-      Oval = VNIn + rho*(VIn-VNIn) - crho
-    ELSE IF (ABS(one-rho_0).le.tol) THEN ! If firms do not face extensive margin choice
-      rho  = one
-      crho = zero
-      Oval = VIn
-    END IF
+    rho  = rho_0/(rho_0+(one-rho_0)*EXPM(-(VIn-VNIn)/ckap))
+    crho = - ckap*LOGM(rho_0+(one-rho_0)*EXPM(-(VIn-VNIn)/ckap)) - (one-rho)*(VIn-VNIn)
+    Oval = VNIn + rho*(VIn-VNIn) - crho
 
   ! If innovation choices CANNOT be adjusted (for the experiment)
-  ELSEIF (EGROWTH.ne.0) THEN
+  ELSEIF (EGROWTH.eq.1) THEN
 
     ! Intensive margin
     Tdd1(:) = pdd0(id,in,:)                 ! Chosen distribution from bechmark
@@ -206,15 +200,18 @@ SUBROUTINE VALUEFUNC(val,npn,id,in,sav)
     VIn     = SUM(Tdd1(:)*VN(:)) - cpi      ! Value of innovating
 
     ! Extensive margin
-    IF (ABS(one-rho_0).gt.tol) THEN         ! If firms face extensive margin choice
-      rho  = prho0(id,in)                   ! Probability of innovation from bechmark
-      crho = pcrho0(id,in)                  ! Cost of probability of innovation from bechmark
-      Oval = VNIn + rho*(VIn-VNIn) - crho   ! Value of innovation stage
-    ELSE IF (ABS(one-rho_0).le.tol) THEN    ! If firms do not face extensive margin choice
-      rho  = one
-      crho = zero
-      Oval = VIn
-    END IF
+    rho  = prho0(id,in)                   ! Probability of innovation from bechmark
+    crho = pcrho0(id,in)                  ! Cost of probability of innovation from bechmark
+    Oval = VNIn + rho*(VIn-VNIn) - crho   ! Value of innovation stage
+
+  ! Dynamics of productivity ~ AR(1)
+  ELSEIF (EGROWTH.eq.2) THEN
+
+    cpi     = pcpi0(id,in)
+    crho    = pcrho0(id,in)
+    rho     = one
+    Tdd1(:) = Tdf(id,:)
+    Oval    = SUM(Tdf(id,:)*VN(:)) - prho0(id,in)*cpi - crho
 
   END IF
 
@@ -245,6 +242,7 @@ SUBROUTINE VALUEFUNC(val,npn,id,in,sav)
     pcpi(id,in)  = cpi                                      ! Cost of intensive margin
     px(id,in)    = (one-delta0)*(crho + rho*cpi)            ! Cost of innovation
     ppd(id,in,:) = rho*Tdd1(:) + (one-rho)*Td0(id,:)        ! Efective distribution of next period's productivity
+    pV(id,in,:)  = VN(:)/MAXVAL(VN(:))
   END IF
   RETURN
 END SUBROUTINE VALUEFUNC
@@ -367,14 +365,15 @@ SUBROUTINE AGGREGATE( )
   TOTCRHO = TOTCRHO/SUM(Dist(:,:))
   TOTCPI  = TOTCPI/SUM(Dist(:,:))
 
-  ! Dispersion in MPL
-  MMPL = zero ; VMPL = zero
-  DO id = 1,Nd ; DO in = 1,Nn
-    MMPL = MMPL + Dist(id,in)*gamma*REVENUES(dgrid(id),pnp(id,in))/pnp(id,in)
-  END DO ; END DO; MMPL = MMPL/SUM(dist(:,:)) ; DO id = 1,Nd ; DO in = 1,Nn
-    VMPL = VMPL + Dist(id,in)*( gamma*REVENUES(dgrid(id),pnp(id,in))/pnp(id,in) - MMPL )**two
-  END DO ; END DO
-  VMPL = VMPL/MMPL
+  ! Transition matrix for productivity
+  TRD(:,:) = zero
+  DO id = 1,Nd
+    TRD(id,:) = zero
+    DO in=1,Nn
+      TRD(id,:) = TRD(id,:) + ppd(id,in,:)*Dist(id,in)
+    END DO
+    TRD(id,:) = TRD(id,:)/SUM(Dist(id,:))
+  END DO
 
   RETURN
 END SUBROUTINE AGGREGATE
@@ -454,16 +453,16 @@ SUBROUTINE SETMOMENTS( )
   MNOM(i) = '  Size Ent     ' ; MOMSM(i) = m_nage0   ; MOMSD(i) = d_nage0   ; WMAT(i) = DBLE(5.00) ; i = i + 1
   MNOM(i) = '  CV Size      ' ; MOMSM(i) = m_stdn    ; MOMSD(i) = d_stdn    ; WMAT(i) = DBLE(5.00) ; i = i + 1
   MNOM(i) = '  CV Entrants  ' ; MOMSM(i) = m_stdn0   ; MOMSD(i) = d_stdn0   ; WMAT(i) = DBLE(5.00) ; i = i + 1
+  MNOM(i) = '  Share firing ' ; MOMSM(i) = m_asf     ; MOMSD(i) = d_asf     ; WMAT(i) = DBLE(5.01) ; i = i + 1
+  MNOM(i) = '  Share hiring ' ; MOMSM(i) = m_ash     ; MOMSD(i) = d_ash     ; WMAT(i) = DBLE(5.01) ; i = i + 1
+  MNOM(i) = '  Rate firing  ' ; MOMSM(i) = m_arf     ; MOMSD(i) = d_arf     ; WMAT(i) = DBLE(5.01) ; i = i + 1
+  MNOM(i) = '  Rate hiring  ' ; MOMSM(i) = m_arh     ; MOMSD(i) = d_arh     ; WMAT(i) = DBLE(5.01) ; i = i + 1
   MNOM(i) = '  % firms 0-5  ' ; MOMSM(i) = m_ncat(1) ; MOMSD(i) = d_ncat(1) ; WMAT(i) = DBLE(1.01) ; i = i + 1
   MNOM(i) = '  % firms 6-10 ' ; MOMSM(i) = m_ncat(2) ; MOMSD(i) = d_ncat(2) ; WMAT(i) = DBLE(1.01) ; i = i + 1
   MNOM(i) = '  % firms 11-15' ; MOMSM(i) = m_ncat(3) ; MOMSD(i) = d_ncat(3) ; WMAT(i) = DBLE(1.01) ; i = i + 1
   MNOM(i) = '  % firms 16-20' ; MOMSM(i) = m_ncat(4) ; MOMSD(i) = d_ncat(4) ; WMAT(i) = DBLE(1.01) ; i = i + 1
   MNOM(i) = '  % firms 21-25' ; MOMSM(i) = m_ncat(5) ; MOMSD(i) = d_ncat(5) ; WMAT(i) = DBLE(1.01) ; i = i + 1
   MNOM(i) = '  % firms >25  ' ; MOMSM(i) = m_ncat(6) ; MOMSD(i) = d_ncat(6) ; WMAT(i) = DBLE(1.01) ; i = i + 1
-  MNOM(i) = '  Share firing ' ; MOMSM(i) = m_asf     ; MOMSD(i) = d_asf     ; WMAT(i) = DBLE(5.01) ; i = i + 1
-  MNOM(i) = '  Rate firing  ' ; MOMSM(i) = m_arf     ; MOMSD(i) = d_arf     ; WMAT(i) = DBLE(5.01) ; i = i + 1
-  MNOM(i) = '  Share hiring ' ; MOMSM(i) = m_ash     ; MOMSD(i) = d_ash     ; WMAT(i) = DBLE(5.01) ; i = i + 1
-  MNOM(i) = '  Rate hiring  ' ; MOMSM(i) = m_arh     ; MOMSD(i) = d_arh     ; WMAT(i) = DBLE(5.01) ; i = i + 1
   MNOM(i) = '  Profit share ' ; MOMSM(i) = m_prof    ; MOMSD(i) = d_prof    ; WMAT(i) = DBLE(0.01) ; i = i + 1
 
   ! Define targets as % deviation in moments
@@ -480,6 +479,7 @@ SUBROUTINE SETMOMENTS( )
 
   RETURN
 END SUBROUTINE SETMOMENTS
+
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

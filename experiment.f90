@@ -15,12 +15,13 @@ CONTAINS
 ! This subroutine controls the experiment
 SUBROUTINE RUNEXPERIMENT( )
 
-  USE toolkit , ONLY : GRID,TIMING
+  USE toolkit , ONLY : GRID,TIMING,TAUCHEN
   IMPLICIT NONE
-  INTEGER , PARAMETER    :: NUMMOMS = 14
+  INTEGER , PARAMETER    :: NUMMOMS = 13
   INTEGER                :: ifc,j,i,NUMEXP,in,id,ii
-  REAL(rp)               :: fc0,wage0,aux1,aux2,GN0(Nn,2),GN1(Nn,2)
+  REAL(rp)               :: fc0,wage0,aux1,aux2,aux3,GN0(Nn,2),GN1(Nn,2)
   REAL(rp)               :: Di1(Nd,Nn),prho1(Nd,Nn),GD0(Nd),GD1(Nd),VD0(Nd),VD1(Nd),PP1(Nd,Nd),PP0(Nd,Nd),R_w_1,R_w0_1
+  REAL(rp)               :: TTD(Nd,Nd,4)
   REAL(rp) , ALLOCATABLE :: R_PE(:,:),R_GE(:,:),R_GE0(:,:),R_fc(:),R_w(:),R_w0(:)
   REAL(rp) , ALLOCATABLE :: R_PE_1(:),R_GE_1(:),R_GE0_1(:),Di0(:,:)
 
@@ -32,14 +33,12 @@ SUBROUTINE RUNEXPERIMENT( )
     WRITE(*,FMT="(A)",ADVANCE="YES") '                                                                 '
     WRITE(*,FMT="(A)",ADVANCE="YES") '    [ 1 ] Varying firing costs: GE & PE                          '
     WRITE(*,FMT="(A)",ADVANCE="YES") '    [ 2 ] Varying firing costs: with & w/o innovation            '
+    WRITE(*,FMT="(A)",ADVANCE="YES") '    [ 3 ] Varying firing costs: with innovation & static AR(1)   '
+    WRITE(*,FMT="(A)",ADVANCE="YES") '    [ 4 ] Varying firing costs: with innovation & changing AR(1) '
     WRITE(*,FMT="(A)",ADVANCE="YES") '    [ n ] n points in (0,...,fc_0,...,2*fc_0), min 5             '
   1 WRITE(*,FMT="(A)",ADVANCE="YES") '                                                                 '
     WRITE(*,FMT="(A)",ADVANCE="NO" ) '  Your choice: '; READ (*,*) NUMEXP
     WRITE(*,FMT="(A)",ADVANCE="YES") '                                                                 '
-    IF ( NUMEXP.LT.1 .AND. NUMEXP.GT.2 .AND. NUMEXP.LT.5 ) THEN
-      WRITE(*,FMT="(A)") '  ERROR!! Chose 1, 2 or a number larger than 5. Try again... '
-      GOTO 1
-    END IF
     WRITE(*,FMT="(A)",ADVANCE="YES") '  ---------------------------------------------------------------'
     WRITE(*,FMT="(A)",ADVANCE="YES") '                                                                 '
 
@@ -56,13 +55,16 @@ SUBROUTINE RUNEXPERIMENT( )
   EGROWTH = 0
   timing0 = TIMING(1)
 
-  IF (NUMEXP.EQ.1 .OR. NUMEXP.EQ.2) THEN
+  IF (NUMEXP.EQ.3 .OR. NUMEXP.EQ.4) THEN
+    IF (ALLOCATED(Tdf)) DEALLOCATE(Tdf) ; ALLOCATE(Tdf(Nd,Nd)) ; Tdf = DBLE(0.00)
+  END IF
 
-    ! Allocate matrices to store results
-    IF (ALLOCATED(R_PE)) DEALLOCATE(R_PE) ; ALLOCATE(R_PE(NUMMOMS,4)) ; R_PE(:,:) = zero    ! General equilibrium results
-    IF (ALLOCATED(R_GE)) DEALLOCATE(R_GE) ; ALLOCATE(R_GE(NUMMOMS,4)) ; R_GE(:,:) = zero    ! Partial equilibrium or exogenous innovation results
-    IF (ALLOCATED(R_w))  DEALLOCATE(R_w)  ; ALLOCATE(R_w(4))          ; R_w(:)    = zero    ! Equilibrium qages
-    IF (ALLOCATED(R_w0)) DEALLOCATE(R_w0) ; ALLOCATE(R_w0(4))         ; R_w0(:)   = zero    ! Equilibrium wages if exogenous innovation
+  IF (NUMEXP.EQ.1 .OR. NUMEXP.EQ.2 .OR. NUMEXP.EQ.3 .OR. NUMEXP.EQ.4) THEN
+
+    IF (ALLOCATED(R_PE)) DEALLOCATE(R_PE) ; ALLOCATE(R_PE(NUMMOMS,4)) ; R_PE(:,:) = zero
+    IF (ALLOCATED(R_GE)) DEALLOCATE(R_GE) ; ALLOCATE(R_GE(NUMMOMS,4)) ; R_GE(:,:) = zero
+    IF (ALLOCATED(R_w))  DEALLOCATE(R_w)  ; ALLOCATE(R_w(4))          ; R_w(:)    = zero
+    IF (ALLOCATED(R_w0)) DEALLOCATE(R_w0) ; ALLOCATE(R_w0(4))         ; R_w0(:)   = zero
 
     IF (NUMEXP.EQ.1) PRINT ('(A27)') , '  General equilibrium      '
     IF (NUMEXP.EQ.2) PRINT ('(A27)') , '  With innovation          '
@@ -70,41 +72,40 @@ SUBROUTINE RUNEXPERIMENT( )
     ! No firing costs
     PRINT ('(A37)') , '   - Solving economy with fc = 0.0   ' ; wrate = one ; fc = zero
     CALL FIND_EQUIL_WRATE(0)
-    CALL WRITE_RESULTS(1,'experiment_0')
     CALL FILLRESULTS(R_GE(:,1)) ; R_w(1) = wrate
     CALL FILLINNOVATION(GD0,VD0,PP0)
     CALL FILLINNOVATIONbis(GN0)
 
-    ! Allocate matrices to store innovation choices from the frictionless economy if experiment 2
-    IF (NUMEXP.eq.2) THEN
-      IF (ALLOCATED(pdd0))   DEALLOCATE(pdd0)   ; ALLOCATE(pdd0(Nd,Nn,Nd)) ; pdd0(:,:,:) = pdd(:,:,:)
-      IF (ALLOCATED(pcpi0))  DEALLOCATE(pcpi0)  ; ALLOCATE(pcpi0(Nd,Nn))   ; pcpi0(:,:)  = pcpi(:,:)
-      IF (ALLOCATED(prho0))  DEALLOCATE(prho0)  ; ALLOCATE(prho0(Nd,Nn))   ; prho0(:,:)  = prho(:,:)
-      IF (ALLOCATED(pcrho0)) DEALLOCATE(pcrho0) ; ALLOCATE(pcrho0(Nd,Nn))  ; pcrho0(:,:) = pcrho(:,:)
-      IF (ALLOCATED(Di0))    DEALLOCATE(Di0)    ; ALLOCATE(Di0(Nd,Nn))     ; Di0(:,:)    = Dist(:,:)
-    END IF
+    IF (NUMEXP.GE.3) CALL ESTIMATEAR1(TRD,aux1,aux2,aux3)
+    IF (NUMEXP.GE.3) CALL TAUCHEN(dgrid,aux2,aux1,aux3,Nd,TTD(:,:,1))
 
-    ! Solving the general equilibrium economy with fc = 0.2, fc = 0.4 and fc = 1.0
+    IF (ALLOCATED(pdd0))   DEALLOCATE(pdd0)   ; ALLOCATE(pdd0(Nd,Nn,Nd)) ; pdd0(:,:,:) = pdd(:,:,:)
+    IF (ALLOCATED(pcpi0))  DEALLOCATE(pcpi0)  ; ALLOCATE(pcpi0(Nd,Nn))   ; pcpi0(:,:)  = pcpi(:,:)
+    IF (ALLOCATED(prho0))  DEALLOCATE(prho0)  ; ALLOCATE(prho0(Nd,Nn))   ; prho0(:,:)  = prho(:,:)
+    IF (ALLOCATED(pcrho0)) DEALLOCATE(pcrho0) ; ALLOCATE(pcrho0(Nd,Nn))  ; pcrho0(:,:) = pcrho(:,:)
+    IF (ALLOCATED(Di0))    DEALLOCATE(Di0)    ; ALLOCATE(Di0(Nd,Nn))     ; Di0(:,:)    = Dist(:,:)
+
     DO ii = 1,3 ; wrate = one
 
       IF (ii.eq.1) fc = fc0
       IF (ii.eq.2) fc = fc0*two
       IF (ii.eq.3) fc = one
 
-      PRINT ('(A31),F7.4') , '   - Solving economy with fc = ' , fc
+      IF (ii.eq.1) PRINT ('(A37)') , '   - Solving economy with fc = fc_0  '
+      IF (ii.eq.2) PRINT ('(A37)') , '   - Solving economy with fc = 2*fc_0'
+      IF (ii.eq.3) PRINT ('(A37)') , '   - Solving economy with fc = 1.0   '
 
-      ! Find equilibrium wage
       CALL FIND_EQUIL_WRATE(0)
 
-      ! Print results to txt file
-      IF (ii.eq.1) CALL WRITE_RESULTS(1,'experiment_fc')
-      IF (ii.eq.2) CALL WRITE_RESULTS(1,'experiment_2fc')
-      IF (ii.eq.3) CALL WRITE_RESULTS(1,'experiment_1')
-
-      ! Fill results andd print innovation choices
+      ! Fill results to print
       CALL FILLRESULTS(R_GE(:,ii+1)) ; R_w(ii+1) = wrate
       CALL FILLINNOVATION(GD1,VD1,PP1)
       CALL PRINTINNOVATION(GD1,VD1,PP1,GD0,VD0,PP0,ii)
+      CALL FILLINNOVATIONbis(GN1)
+      CALL PRINTINNOVATIONbis(GN1,GN0,ii)
+
+      IF (NUMEXP.EQ.4) CALL ESTIMATEAR1(TRD,aux1,aux2,aux3)
+      IF (NUMEXP.EQ.4) CALL TAUCHEN(dgrid,aux2,aux1,aux3,Nd,TTD(:,:,ii+1))
 
     END DO
 
@@ -115,80 +116,127 @@ SUBROUTINE RUNEXPERIMENT( )
 
     ! Solve counterfactual economies in partial equilibrium
     IF (NUMEXP.EQ.1) THEN ; PRINT ('(A27)') , '  Partial equilibrium      '
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 0.0   '
+      R_PE(:,1) = R_GE(:,1) ; R_w0(1) = R_w(1)
+
       PRINT ('(A37)') , '   - Solving economy with fc = fc_0  '
       wrate = R_w(1) ; fc = fc0 ; CALL SOLVEPROBLEM( ) ; CALL FILLRESULTS(R_PE(:,2)) ; R_w0(2) = wrate
+
       PRINT ('(A37)') , '   - Solving economy with fc = 2*fc_0'
       wrate = R_w(1) ; fc = fc0*two ; CALL SOLVEPROBLEM( ) ; CALL FILLRESULTS(R_PE(:,3)) ; R_w0(3) = wrate
+
       PRINT ('(A37)') , '   - Solving economy with fc = 1.0   '
       wrate = R_w(1) ; fc = one ; CALL SOLVEPROBLEM( ) ; CALL FILLRESULTS(R_PE(:,4)) ; R_w0(4) = wrate
 
-    ! Solve counterfactual economies in general equilibrium, fixing innovation choices from frictionless economy (EGROWTH=-1)
-    ELSEIF (NUMEXP.EQ.2) THEN ; PRINT ('(A27)') , '  Without innovation       ' ; EGROWTH = -1
+    ! Solve counterfactual economies in general equilibrium, fixing innovation choices from frictionless economy (EGROWTH = 1)
+    ELSEIF (NUMEXP.EQ.2) THEN ; PRINT ('(A27)') , '  Without innovation       ' ; EGROWTH = 1
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 0.0   '
+      R_PE(:,1) = R_GE(:,1) ; R_w0(1) = R_w(1)
+
       PRINT ('(A37)') , '   - Solving economy with fc = fc_0  '
       wrate = one ; fc = fc0 ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,2)) ; R_w0(2) = wrate
+
       PRINT ('(A37)') , '   - Solving economy with fc = 2*fc_0'
       wrate = one ; fc = fc0*two ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,3)) ; R_w0(3) = wrate
+
       PRINT ('(A37)') , '   - Solving economy with fc = 1.0   '
       wrate = one ; fc = one ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,4)) ; R_w0(4) = wrate
+
+    ! Solve counterfactual economies in general equilibrium, with AR(1) productivity dynamics (EGROWTH = 2)
+    ELSEIF (NUMEXP.EQ.3) THEN ; PRINT ('(A27)') , '  With constant AR(1)      '
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 0.0   ' ; EGROWTH = 2 ; Tdf = TTD(:,:,1)
+      wrate = one ; fc = zero ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,1)) ; R_w0(1) = wrate
+
+      PRINT ('(A37)') , '   - Solving economy with fc = fc_0  ' ; EGROWTH = 2 ; Tdf = TTD(:,:,1)
+      wrate = one ; fc = fc0 ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,2)) ; R_w0(2) = wrate
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 2*fc_0' ; EGROWTH = 2 ; Tdf = TTD(:,:,1)
+      wrate = one ; fc = fc0*two ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,3)) ; R_w0(3) = wrate
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 1.0   ' ; EGROWTH = 2 ; Tdf = TTD(:,:,1)
+      wrate = one ; fc = one ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,4)) ; R_w0(4) = wrate
+
+    ! Solve counterfactual economies in general equilibrium, with changing AR(1) productivity dynamics (EGROWTH = 2)
+    ELSEIF (NUMEXP.EQ.4) THEN ; PRINT ('(A27)') , '  With changing AR(1)      '
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 0.0   ' ; EGROWTH = 2 ; Tdf = TTD(:,:,1)
+      wrate = one ; fc = zero ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,1)) ; R_w0(1) = wrate
+
+      PRINT ('(A37)') , '   - Solving economy with fc = fc_0  ' ; EGROWTH = 2 ; Tdf = TTD(:,:,2)
+      wrate = one ; fc = fc0 ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,2)) ; R_w0(2) = wrate
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 2*fc_0' ; EGROWTH = 2 ; Tdf = TTD(:,:,3)
+      wrate = one ; fc = fc0*two ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,3)) ; R_w0(3) = wrate
+
+      PRINT ('(A37)') , '   - Solving economy with fc = 1.0   ' ; EGROWTH = 2 ; Tdf = TTD(:,:,4)
+      wrate = one ; fc = one ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_PE(:,4)) ; R_w0(4) = wrate
+
     END IF
+    EGROWTH = 0
 
     ! Print table with results
     IF (NUMEXP.EQ.1) OPEN(unit=25,file="results/experiment_1.txt",action="write")
     IF (NUMEXP.EQ.2) OPEN(unit=25,file="results/experiment_2.txt",action="write")
-      WRITE(25,34) '                    '
-      WRITE(25,36) ('-',i=1,80)
-      WRITE(25,'(A28,A3,A24,A3,A24)') '  ','  |','         Endogenous     ','  |','        Exogenous       '
-      WRITE(25,35) '                    ' , 'fc=0.0','fc=0.2','fc=0.4','fc=1.0','fc=0.2','fc=0.4','fc=1.0'
-      WRITE(25,36) ('-',i=1,80)
-      IF (NUMEXP.EQ.1) WRITE(25,34) '  Wage rate         ' , R_w(1:4)             ; j = 1
-      IF (NUMEXP.EQ.2) WRITE(25,34) '  Wage rate         ' , R_w(1:4) , R_w0(2:4) ; j = 1
-      WRITE(25,34) '  Agg. Productivity ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Firm Productivity ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Productivity grow ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Innovation Exp.   ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Output            ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Employment        ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Output per worker ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Profits           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Consumption       ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Hirings           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Firings           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Share hiring      ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Share firing      ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Var MPL           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,36) ('-',i=1,80)
+    IF (NUMEXP.EQ.3) OPEN(unit=25,file="results/experiment_3.txt",action="write")
+    IF (NUMEXP.EQ.4) OPEN(unit=25,file="results/experiment_4.txt",action="write")
+      WRITE(25,*) '                    '
+      WRITE(25,36) ('-',i=1,87)
+      IF (NUMEXP.EQ.1) WRITE(25,'(A20,A1,A32,A3,A32)') '  ',' |','           General Equil        ',&
+                                                          '   |','          Partial Equil         '
+      IF (NUMEXP.EQ.2) WRITE(25,'(A20,A1,A32,A3,A32)') '  ',' |','            Endogenous          ',&
+                                                          '   |','            Exogenous           '
+      IF (NUMEXP.EQ.3) WRITE(25,'(A20,A1,A32,A3,A32)') '  ',' |','            Endogenous          ',&
+                                                          '   |','          Constant AR(1)        '
+      IF (NUMEXP.EQ.4) WRITE(25,'(A20,A1,A32,A3,A32)') '  ',' |','            Endogenous          ',&
+                                                          '   |','          Changing AR(1)        '
+      WRITE(25,35) '                    ' , 'fc=0.0','fc=0.2','fc=0.4','fc=1.0','fc=0.0','fc=0.2','fc=0.4','fc=1.0'
+      WRITE(25,36) ('-',i=1,87)
+      WRITE(25,34) '  Wage rate         ' , R_w(1:4)    , R_w0(1:4)   ; j = 1
+      WRITE(25,34) '  Agg. Productivity ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Firm Productivity ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Productivity grow ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Innovation Exp.   ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Output            ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Employment        ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Output per worker ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Profits           ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Consumption       ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Hirings           ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Firings           ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Share hiring      ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Share firing      ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,36) ('-',i=1,87)
       DO i=4,1,-1
-        R_w(i)  = cien*(R_w(i)/R_w(1)  - one)
-        R_w0(i) = cien*(R_w0(i)/R_w(1) - one)
+        R_w(i)  = cien*(R_w(i)/R_w(1)   - one)
+        R_w0(i) = cien*(R_w0(i)/R_w0(1) - one)
         DO j=1,NUMMOMS
           R_GE(j,i) = cien*(R_GE(j,i)/R_GE(j,1) - one)
-          R_PE(j,i) = cien*(R_PE(j,i)/R_GE(j,1) - one)
+          R_PE(j,i) = cien*(R_PE(j,i)/R_PE(j,1) - one)
         END DO
       END DO
-      IF (NUMEXP.EQ.1) WRITE(25,34) '  Wage rate         ' , R_w(1:4)             ; j = 1
-      IF (NUMEXP.EQ.2) WRITE(25,34) '  Wage rate         ' , R_w(1:4) , R_w0(2:4) ; j = 1
-      WRITE(25,34) '  Agg. Productivity ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Firm Productivity ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Productivity grow ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Innovation Exp.   ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Output            ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Employment        ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Output per worker ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Profits           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Consumption       ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Firings           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Hirings           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Share hiring      ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Share firing      ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,34) '  Var MPL           ' , R_GE(j,1:4) , R_PE(j,2:4) ; j = j + 1
-      WRITE(25,36) ('-',i=1,80)
-      WRITE(25,34) '                    '
+      WRITE(25,34) '  Wage rate         ' , R_w(1:4)    , R_w0(1:4)   ; j = 1
+      WRITE(25,34) '  Agg. Productivity ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Firm Productivity ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Productivity grow ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Innovation Exp.   ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Output            ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Employment        ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Output per worker ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Profits           ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Consumption       ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Firings           ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Hirings           ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Share hiring      ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,34) '  Share firing      ' , R_GE(j,1:4) , R_PE(j,1:4) ; j = j + 1
+      WRITE(25,36) ('-',i=1,87)
+      WRITE(25,*) '                    '
     CLOSE(25)
 
   END IF
 
-
-  ! Experiment 3: varying firing costs from 0 to 0.40
   IF (NUMEXP.GE.5) THEN
 
     ! Make sure number of points is odd (to include bechmark value in the grid)
@@ -213,20 +261,20 @@ SUBROUTINE RUNEXPERIMENT( )
     IF (ALLOCATED(Di0))    DEALLOCATE(Di0)    ; ALLOCATE(Di0(Nd,Nn))     ; Di0    = DBLE(0.00)
 
     ! Open text files to store results (input for generating graphs)
-    OPEN(unit=16,file="results/experiment_3_ge.txt",action="write")
-    OPEN(unit=17,file="results/experiment_3_pe.txt",action="write")
-    OPEN(unit=18,file="results/experiment_3_ge_ni.txt",action="write")
-    OPEN(unit=19,file="results/experiment_3_ge_raw.txt",action="write")
-    OPEN(unit=20,file="results/experiment_3_pe_raw.txt",action="write")
-    OPEN(unit=21,file="results/experiment_3_ge_ni_raw.txt",action="write")
+    OPEN(unit=16,file="results/experiment_5_ge.txt",action="write")
+    OPEN(unit=17,file="results/experiment_5_pe.txt",action="write")
+    OPEN(unit=18,file="results/experiment_5_ge_ni.txt",action="write")
+    OPEN(unit=19,file="results/experiment_5_ge_raw.txt",action="write")
+    OPEN(unit=20,file="results/experiment_5_pe_raw.txt",action="write")
+    OPEN(unit=21,file="results/experiment_5_ge_ni_raw.txt",action="write")
 
     ! Print header of text files
-    WRITE(16,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf','mpl'
-    WRITE(17,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf','mpl'
-    WRITE(18,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf','mpl'
-    WRITE(19,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf','mpl'
-    WRITE(20,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf','mpl'
-    WRITE(21,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf','mpl'
+    WRITE(16,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf'
+    WRITE(17,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf'
+    WRITE(18,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf'
+    WRITE(19,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf'
+    WRITE(20,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf'
+    WRITE(21,'(40(A10))') 'fc','wrate','tfp','d','dg','x','y','n','yn','pi','c','f','h','sh','sf'
 
     ! Solve counterfactual economies
     DO ifc=1,NUMEXP ; fc = R_fc(ifc)
@@ -246,10 +294,10 @@ SUBROUTINE RUNEXPERIMENT( )
       END IF
 
       ! Solve GE without innovation (innovation choices fixed from frictionless economy)
-      EGROWTH = -1 ; wrate = one ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_GE0(:,ifc)) ; R_w0(ifc) = wrate
+      EGROWTH = 1 ; wrate = one ; CALL FIND_EQUIL_WRATE(0) ; CALL FILLRESULTS(R_GE0(:,ifc)) ; R_w0(ifc) = wrate
 
       ! Solve PE (with innovation)
-      EGROWTH =  0 ; wrate = R_w(1) ; CALL SOLVEPROBLEM( ) ; CALL FILLRESULTS(R_PE(:,ifc))
+      EGROWTH = 0 ; wrate = R_w(1) ; CALL SOLVEPROBLEM( ) ; CALL FILLRESULTS(R_PE(:,ifc))
 
       ! Print results to text files
       WRITE(16,'(40(F10.4))') R_fc(ifc) , cien*(R_w(ifc)-R_w(1))  , (cien*R_GE( j,ifc)/R_GE(j,1)-cien,j=1,SIZE(R_GE(:,1)))
@@ -268,8 +316,8 @@ SUBROUTINE RUNEXPERIMENT( )
     CALL SYSTEM('gnuplot -p figures/codes/experiment_change.gnu')
   END IF
 
-  34 FORMAT (A20,F8.2,'  |',3(F8.2),'  |',3(F8.2))
-  35 FORMAT (A20,A8  ,'  |',3(A8  ),'  |',3(A8  ))
+  34 FORMAT (A20,' |',4(F8.2),'  |',4(F8.2))
+  35 FORMAT (A20,' |',4(A8  ),'  |',4(A8  ))
   36 FORMAT ('  ',100(A1))
 
   RETURN
@@ -306,12 +354,39 @@ SUBROUTINE RUNEXPERIMENT( )
        WRITE(15,'(100(A20))') 'dc0','fc1','d','ddd','ed0','ed1','vvv','vv0','vvv1'
        DO id=1,Nd
          WRITE(15,'(100(F20.15))') zero , fc , dgrid(id)   , &
-           GDa(id)-GDb(id)     , GDb(id)    , GDa(id)      , &
-           Vda(id)-VDb(id)     , VDb(id)    , Vda(id)
+           GDa(id)-GDb(id) , GDb(id) , GDa(id)      , &
+           Vda(id)-VDb(id) , VDb(id) , Vda(id)
        END DO
       CLOSE(15)
       RETURN
     END SUBROUTINE PRINTINNOVATION
+    SUBROUTINE FILLINNOVATIONbis(GN)
+      IMPLICIT NONE
+      REAL(rp) , INTENT(OUT) :: GN(Nn,2)
+      REAL(rp) :: aux
+      GN(:,:)   = zero
+      DO in = 1,Nn
+        DO id=1,Nd
+          GN(in,1) = GN(in,1) + Dist(id,in)*( SUM( pdd(id,in,:)*EXP(dgrid(:)) )/EXP(dgrid(id))  - one )
+        END DO
+        GN(in,2) = SUM(Dist(:,in))
+      END DO
+      RETURN
+    END SUBROUTINE FILLINNOVATIONbis
+    SUBROUTINE PRINTINNOVATIONbis(GNa,GNb,IND)
+      IMPLICIT NONE
+      REAL(rp) , INTENT(IN) :: GNa(Nn,2),GNb(Nn,2)
+      INTEGER  , INTENT(IN) :: IND
+      IF (IND.eq.1) OPEN(unit=15, file="results/experiment_innovation_n_fc.txt"  , action= "write" )
+      IF (IND.eq.2) OPEN(unit=15, file="results/experiment_innovation_n_2fc.txt" , action= "write" ) !, position="append")
+      IF (IND.eq.3) OPEN(unit=15, file="results/experiment_innovation_n_one.txt" , action= "write" ) !, position="append")
+      IF (IND.eq.1) WRITE(15,'(100(A20))') 'fc1','n','g1','dist1','g0','dist0'
+      DO in=1,Nn
+        WRITE(15,'(100(F20.15))') fc,ngrid(in),GNa(in,1),GNa(in,2),GNb(in,1),GNb(in,2)
+      END DO
+      CLOSE(15)
+      RETURN
+    END SUBROUTINE PRINTINNOVATIONbis
 END SUBROUTINE RUNEXPERIMENT
 
 ! %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -332,7 +407,6 @@ SUBROUTINE FILLRESULTS(RVEC)
   RVEC(11) = cien*TOTH/TOTL
   RVEC(12) = cien*TOTHF
   RVEC(13) = cien*TOTFF
-  RVEC(14) = NOPT
   RETURN
 END SUBROUTINE FILLRESULTS
 

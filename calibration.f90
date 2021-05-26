@@ -22,11 +22,11 @@ SUBROUTINE SETPARAMS(VECPARS,INDICATOR)
   CALL NORMALIZE ( VECPARS(i) , fc       , DBLE(0.800) , DBLE(0.000) , INDICATOR ) ; i = i + 1 ! 1
   CALL NORMALIZE ( VECPARS(i) , sigma_z  , DBLE(0.500) , DBLE(0.010) , INDICATOR ) ; i = i + 1 ! 2
   CALL NORMALIZE ( VECPARS(i) , mu_z     , DBLE(0.150) , DBLE(0.010) , INDICATOR ) ; i = i + 1 ! 3
-  CALL NORMALIZE ( VECPARS(i) , bigA     , DBLE(7.000) , DBLE(1.000) , INDICATOR ) ; i = i + 1 ! 5
-  CALL NORMALIZE ( VECPARS(i) , sigma0_z , DBLE(2.000) , DBLE(0.000) , INDICATOR ) ; i = i + 1 ! 6
-  CALL NORMALIZE ( VECPARS(i) , rho_0    , DBLE(1.000) , DBLE(0.000) , INDICATOR ) ; i = i + 1 ! 7
+  CALL NORMALIZE ( VECPARS(i) , bigA     , DBLE(4.000) , DBLE(1.000) , INDICATOR ) ; i = i + 1 ! 4
+  CALL NORMALIZE ( VECPARS(i) , sigma0_z , DBLE(2.000) , DBLE(0.000) , INDICATOR ) ; i = i + 1 ! 5
+  CALL NORMALIZE ( VECPARS(i) , rho_0    , DBLE(1.000) , DBLE(0.000) , INDICATOR ) ; i = i + 1 ! 6
   CALL NORMALIZE ( VECPARS(i) , kappa_0  , DBLE(70.00) , DBLE(0.000) , INDICATOR ) ; i = i + 1 ! 7
-  CALL NORMALIZE ( VECPARS(i) , kappa_1  , DBLE(30.00) , DBLE(-1.00) , INDICATOR ) ; i = i + 1 ! 8
+  CALL NORMALIZE ( VECPARS(i) , kappa_1  , DBLE(3.000) , DBLE(-1.00) , INDICATOR ) ; i = i + 1 ! 8
   RETURN
 END SUBROUTINE SETPARAMS
 
