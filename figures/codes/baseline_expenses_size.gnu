@@ -7,7 +7,7 @@ set style line 3 lc rgb '#71c471' lt 1 lw 5
 set style line 4 lc rgb '#97d897' lt 1 lw 5
 set style line 5 lc rgb '#cceacc' lt 1 lw 5
 
-ma  = "results/baseline_expenses_size.txt"
+ma  = "results/graphs/baseline_expenses_size.txt"
 
 set format x "%3.0f"
 set format y "%4.0f"
@@ -16,7 +16,7 @@ set xlabel 'Productivity growth'
 ################################################################################
 # FIGURE 1
 
-set terminal pdfcairo size 10,3.5 enhanced color font 'arial,28' lw 2
+set terminal pdfcairo size 10,3.5 enhanced color font 'arial,21' lw 2
 set output 'figures/baseline_expenses_size.pdf'
 set multiplot layout 1,2
 
@@ -35,6 +35,32 @@ set yrange [0:65]
 set ytics (0,10,20,30,40,50,60)
 set title "Innovation expenses as a share of firm's output"
 plot ma using 'Lab':'Share' w l ls 1 lw 3
+
+unset multiplot
+unset output
+
+################################################################################
+# FIGURE 2
+
+set terminal pdfcairo size 10,3.5 enhanced color font 'arial,21' lw 2
+set output 'figures/baseline_expenses_size_2.pdf'
+set multiplot layout 1,2
+
+set xzeroaxis
+unset key
+set xlabel 'firm size'
+set xrange [0:60]
+set ytics (0,10,20,30,40,50,60)
+
+set yrange [0:65]
+set ytics (0,10,20,30,40,50,60)
+set title "Innovation expenses as a share of firm's output"
+plot ma using 'Lab':'Share' w l ls 1 lw 3
+
+set yrange [0:10]
+set ytics (0,2,4,6,8,10)
+set title "Expenses in timing as a share of total expenses"
+plot ma using 'Lab':'Crho' w l ls 1 lw 3
 
 unset multiplot
 unset output
