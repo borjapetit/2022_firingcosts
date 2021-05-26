@@ -76,6 +76,8 @@ If you choose to **run the experiment**, typing `[2]`, you will be asked which e
 Which experiment do you want to run
   [ 1 ] Varying firing costs: GE & PE
   [ 2 ] Varying firing costs: with & w/o innovation 
+  [ 3 ] Varying firing costs: with innovation & static AR(1)   
+  [ 4 ] Varying firing costs: with innovation & changing AR(1) 
   [ n ] n points in (0,...,fc_0,...,2*fc_0), min 5
 ```
 **Experiment 1** reports the % fall relative to the frictionless economy in a number of aggregates for an economy with the baseline value for the firing cost (`fc_0`), for an economy with a firing cost parameters twice as large as in the baseline calibration, and for an economy with a firing cost of 1. The results are reported for both the general equilibrium case (in which the wage rate is recomputed for each counterfactual economy) and the partial equilibrium one (in which the wage rate is fixed at its value in the frictionless economy).
@@ -84,7 +86,11 @@ Which experiment do you want to run
 
 In both **Experiment 1** and **Experiment 2**, the program calls <c>GNUplot</c> to generate some graphs illustrating the differences in average growth rates and innovation volatility for each value of the firing cost parameter. It also generates a `.txt` files with the results from the experiment: `results/experiment_1.txt` and `results/experiment_2.txt`
 
-**Experiment 3** constructs a grid of points for the firing cost parameters ranging from 0 to twice the baseline value and solves three economies (general equilibrium, partial equilibrium, and general equilibrium with innovation choices from frictionless economy) for value of the firing cost parameter. After computing these results, the program will call `GNUplot` to generate the graphs included in appendix of the paper. If you do not have `GNUplot` installed, the program will return an error, but the results will be saved in a number of text files so you can use other softwares to generate the graphs.
+**Experiment 3** replicates the same exercise of **Experiment 1**, but it computes the losses from firing costs in a economy with a (contat) AR(1) producitivity process. When solving the frictionless economy with no firing frictions, the program stores the AR(1) that better fits firms' productivity dynamics and then uses this AR(1) process for an economy with firing costs equal to zero, the calibrated alue, twice the calibrated value and 1.
+
+**Experiment 4** replicates the same exercise of **Experiment 3**, but using the AR(1) that better fits the productivity dynamics in the baeline economy with each value of the firing costs. Thus, this experiment is similar to **Experiment 3** but changing the AR(1) process for each value of the firing cost parameter.
+
+**Experiment `n`** constructs a grid of points for the firing cost parameters ranging from 0 to twice the baseline value and solves three economies (general equilibrium, partial equilibrium, and general equilibrium with innovation choices from frictionless economy) for value of the firing cost parameter. After computing these results, the program will call `GNUplot` to generate the graphs included in appendix of the paper. If you do not have `GNUplot` installed, the program will return an error, but the results will be saved in a number of text files so you can use other softwares to generate the graphs.
 
 
 ## Calibration
@@ -98,7 +104,6 @@ Choose calibratrion algorithm
   [ 4 ] Levenberg-Marquardt, shocking initial values
   [ 5 ] Simplex, shocking initial values
 ```
-
 
 The [**Levenberg-Marquardt**](https://en.wikipedia.org/wiki/Levenberg–Marquardt_algorithm) algorithm is a Newton-based method to minimize the sum of squared errors of a system of _m_ equations in _n_ unknowns. The [**Simplex**](https://en.wikipedia.org/wiki/Simplex_algorithm) method, a.k.a. Nelder-Mead method, is one of the most popular minimization algorithms to minimize a single-valued equation in _n_ unknowns. If you chose any of these, the program will ask you to set the maximum number of iterations.
 
