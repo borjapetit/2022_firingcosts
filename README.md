@@ -49,7 +49,7 @@ Once compiled, you can run the code by double-clicking the generated executable.
 When clicking the executable, the program will aks you to specify what to do:
 
 ```
-What do you want to do?<br>
+What do you want to do?
   [ 0 ] Solve the model for given parameters (params.txt)
         -> take value of theta from params.txt & find wage
   [ 1 ] Solve the model for given parameters (params.txt)
