@@ -33,7 +33,7 @@ and then use the following command:
 ```
 gfortran -fopenmp -O3 -ffixed-line-length-132 -J $(pwd)/compiledfiles toolkit.f90 params.f90 firmsproblem.f90 calibration.f90 experiment.f90 main.f90 -o model
 ```
-This command includes four flags. First, compiler to link the executable with `OpenMP` for parallel programing, using the flag `-fopenmp`. Second, the flag `-O3`, makes the code faster, although it slows down compilation a bit. Third, the flag `-ffixed-line-length-132` prevents line truncation (I set the line length to 132). Finally, and in order to keep the working directory clean, the flag `$(pwd)/compiledfiles` forces the compiler to store the `.mod` files in the folder `~/compiledfiles` (this will only work is you have defined your current directory before).
+This command includes four flags. First, using the flag `-fopenmp`, the compiler links the executable with `OpenMP` for parallel programing. Second, the flag `-O3`, makes the code faster, although it slows down compilation a bit. Third, the flag `-ffixed-line-length-132` prevents line truncation (I set the line length to 132). Finally, and in order to keep the working directory clean, the flag `$(pwd)/compiledfiles` forces the compiler to store the `.mod` files in the folder `~/compiledfiles` (this will only work is you have defined your current directory before).
 
 If you are using the Intel compiler, the command is:
 ```
