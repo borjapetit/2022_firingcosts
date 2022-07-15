@@ -26,11 +26,7 @@ Please, if you find any error or have a suggestion, do not hesitate to  [contact
 
 ## Compilation
 
-To compile the codes, you first need to set the current directory:
-```
-cd /Users/(...)/code/
-```
-and then use the following command:
+To compile the codes, you first need to set the working directory and then type the following command:
 ```
 gfortran -fopenmp -O3 -ffixed-line-length-132 -J $(pwd)/compiledfiles toolkit.f90 params.f90 firmsproblem.f90 calibration.f90 experiment.f90 main.f90 -o model
 ```
@@ -47,7 +43,7 @@ ifort /openmp /O3 /object:%cd%\compiledfiles\ /module:%cd%\compiledfiles\ toolki
 
 Once compiled, you can run the code by double-clicking the generated executable. The code can be used to solve the model, to run the experiments, to calibrate the parameters, and to run a robustness check of the model parameters.
 
-When clicking the executable, the program will aks you to specify what to do:
+When clicking the executable, the program asks you to specify what to do:
 
 ```
 What do you want to do?
@@ -62,7 +58,7 @@ What do you want to do?
 
 The difference between `[0]` and `[1]` is that the former takes the value of the labor disutility parameter in the household's problem (`theta`) from the text file `params.txt` and compute the equilibrium wage. If you choose `[1]`, instead, the program will asumme a wage rate of one and compute the labor disutility parameter that makes the household's first order condition to be satisfied.
 
-If you choose `[0]` or `[1]`, and after the solution is computed, the program will ask you whether you want to produce figures.
+If you choose `[0]` or `[1]`, and after the solution is computed, the program asks you whether you want to produce figures.
 
 ```
   Do you want to generate graphs? [1] Yes, [0] No
@@ -92,7 +88,7 @@ Which experiment do you want to run
 
 In both **Experiment 1** and **Experiment 2** the program calls <c>GNUplot</c> to generate some graphs illustrating the differences in average growth rates and innovation volatility for each value of the firing cost parameter.
 
-**Experiment `n`** constructs a grid of points for the firing cost parameters ranging from 0 to twice the baseline value and solves three economies (general equilibrium, partial equilibrium, and general equilibrium with innovation choices from frictionless economy) for value of the firing cost parameter. After computing these results, the program will call `GNUplot` to generate the graphs included in appendix of the paper. If you do not have `GNUplot` installed, the program will return an error, but the results will be saved in a number of text files so you can use other softwares to generate the graphs.
+**Experiment `n`** constructs a grid of points for the firing cost parameters ranging from 0 to twice the baseline value and solves three economies (general equilibrium, partial equilibrium, and general equilibrium with innovation choices from frictionless economy) for each value of the firing cost parameter. After computing these results, the program calls `GNUplot` to generate the graphs included the in appendix of the paper. If you do not have `GNUplot` installed, the program will return an error, but the results will be saved in a number of text files so you can use other software to generate the graphs.
 
 
 ## Calibration
