@@ -5,6 +5,8 @@ This repository includes the replication package for my paper "[Aggregate effect
 
 Please, if you find any error or have a suggestion, do not hesitate to  [contact](mailto:bpetit@cunef.edu) me.
 
+_This code is distributed under the [MIT Licence](LICENSE)_
+
 ## Content
 
 | File/folder | Description |
